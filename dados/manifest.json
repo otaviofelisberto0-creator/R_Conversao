@@ -1,0 +1,11 @@
+{
+"versao": 2,
+"formato": "array-compacto",
+"competencia": "2026-07",
+"arquivos": [
+"ND-26-07-p001.json",
+"ND-26-07-p002.json",
+"ND-26-07-p003.json",
+"ND-26-07-p004.json"
+]
+}
