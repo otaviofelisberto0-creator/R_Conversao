@@ -1,15 +1,17 @@
-DASHBOARD CONVERSAO - PACOTE ATUALIZADO PARA GITHUB
-Versao do index: 2026.09.11.3
+VERSAO 2026.09.11.4
 
-1. Envie index.html, .nojekyll e LEIA-ME.txt para a raiz do repositorio.
-2. Envie dados/manifest.json para a pasta dados, substituindo o anterior.
-3. Mantenha na pasta dados os arquivos existentes:
-   ND-26-07-p001.json
-   ND-26-07-p002.json
-   ND-26-07-p003.json
-   ND-26-07-p004.json
-4. Em Settings > Pages, use main e / (root).
-5. Abra o site e confirme que aparece v2026.09.11.3 no cabecalho.
+CORRECOES:
+- CD_NODE usado corretamente no cruzamento municipal.
+- Carregamento incremental sem all.push(...array grande).
+- Erros do manifest e dos JSONs aparecem na tela.
+- Paginas liberadas somente depois da base completa.
+- Compatibilidade com JSON comum, array-compacto e JSON.GZ.
 
-IMPORTANTE
-O ZIP nao repete os quatro JSONs porque eles ja estao no repositorio. Nao exclua esses arquivos.
+PUBLICACAO:
+1. Substitua index.html na raiz.
+2. Mantenha os quatro JSONs atuais na pasta dados.
+3. Mantenha/substitua dados/manifest.json pelo arquivo fornecido.
+4. Confirme a versao v2026.09.11.4 no cabecalho.
+
+ARQUIVO UNICO:
+E tecnicamente possivel usar .json.gz, mas primeiro e necessario gerar o arquivo a partir do CSV. O index ja pode ler .json.gz quando ele for disponibilizado e listado no manifest.
