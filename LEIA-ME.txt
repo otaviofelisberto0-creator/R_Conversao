@@ -1,1 +1,27 @@
-Versao otimizada. Publique index.html, .nojekyll e dados/. Adicione os JSONs ao manifest.json.
+DASHBOARD CONVERSAO - PUBLICACAO NO GITHUB
+
+RAIZ DO REPOSITORIO
+- index.html
+- .nojekyll
+- LEIA-ME.txt
+- pasta dados
+
+PASTA dados
+- manifest.json
+- ND-26-07-p001.json
+- ND-26-07-p002.json
+- ND-26-07-p003.json
+- ND-26-07-p004.json
+
+CORRECOES DESTA VERSAO
+- Corrigido o cruzamento para usar CD_NODE como codigo de municipio.
+- Corrigida a validacao do CSV, que agora exige CD_NODE.
+- Mantida a leitura do formato array-compacto.
+- Melhorado o diagnostico de erro ao carregar manifesto ou partes JSON.
+- Limpeza correta dos downloads gerados ao trocar a competencia.
+- Mantido processamento do CSV em blocos e Web Worker.
+
+PUBLICACAO
+Substitua somente o index.html da raiz por esta versao.
+Mantenha os quatro JSONs na pasta dados.
+Mantenha o manifest.json atual, pois os nomes estao corretos.
