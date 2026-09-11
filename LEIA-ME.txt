@@ -1,0 +1,1 @@
+Versao otimizada. Publique index.html, .nojekyll e dados/. Adicione os JSONs ao manifest.json.
