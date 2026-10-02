@@ -866,3 +866,10 @@ const visibleConversionColumnsV36=out.filter(column=>column!=='CD_NODE');
 renderResult=function(){let query=norm($('#q').value),status=$('#fs'),rows=J.filter(row=>hasSelected(status,row.STATUS_CRUZAMENTO)&&(!query||visibleConversionColumnsV36.some(column=>norm(row[column]).includes(query))));$('#rt').innerHTML='<tr>'+visibleConversionColumnsV36.map(column=>`<th>${column}</th>`).join('')+'</tr>'+rows.slice(0,1000).map(row=>'<tr>'+visibleConversionColumnsV36.map(column=>`<td>${row[column]||''}</td>`).join('')+'</tr>').join('')};
 
 </script></body></html>
+// Atualiza o painel automaticamente a cada 3 minutos (180000 ms)
+setInterval(() => {
+    const b = Array.from(document.querySelectorAll('button')).find(el => el.textContent.includes('Recarregar'));
+    if (b) {
+        b.click();
+        console.log('Painel atualizado automaticamente!');
+    }
