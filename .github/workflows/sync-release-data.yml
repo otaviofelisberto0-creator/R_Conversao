@@ -1,7 +1,7 @@
 name: Sync Release Data
        
 on:
-··push:
+     ··push:
        ····branches: [main]
         ··release:
      ····types: [published, edited]
