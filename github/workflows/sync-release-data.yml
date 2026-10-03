@@ -4,10 +4,12 @@ on:
 push:
 branches:
 - principal
+ 
 release:
 types:
 - published
 - edited
+ 
 workflow_dispatch:
  
 permissions:
@@ -30,20 +32,24 @@ uses: actions/checkout@v4
 - name: Configurar GitHub Pages
 uses: actions/configure-pages@v5
  
-- name: Preparar pasta dos Releases
+- name: Preparar dados dos Releases
 env:
 GH_TOKEN: ${{ github.token }}
 run: |
 set -e
  
+echo "Preparando pasta release-data..."
 rm -rf release-data
 mkdir -p release-data
+ 
+echo "Consultando Releases publicados..."
  
 gh release list \
 --limit 100 \
 --json tagName,isDraft,isPrerelease \
 --jq '.[] | select(.isDraft == false and .isPrerelease == false) | .tagName' \
 | while read tag; do
+ 
 echo "Processando Release: $tag"
  
 gh release download "$tag" \
@@ -51,52 +57,34 @@ gh release download "$tag" \
 --pattern 'bl-*.json' \
 --dir release-data \
 --clobber || true
+ 
 done
  
-echo "Arquivos preparados:"
+echo "Conteudo final de release-data:"
 find release-data -maxdepth 1 -type f -print
  
+echo "Validando ND..."
 test -n "$(find release-data -maxdepth 1 -type f -name 'nd-*.json' -print -quit)"
+ 
+echo "Validando BL..."
 test -n "$(find release-data -maxdepth 1 -type f -name 'bl-*.json' -print -quit)"
  
-- name: Enviar artefato do GitHub Pages
+echo "ND e BL encontrados."
+ 
+- name: Enviar site para GitHub Pages
 uses: actions/upload-pages-artifact@v4
 with:
 path: .
  
 deploy:
+runs-on: ubuntu-latest
+needs: build
+ 
 environment:
 name: github-pages
 url: ${{ steps.deployment.outputs.page_url }}
- 
-runs-on: ubuntu-latest
-needs: build
  
 steps:
 - name: Publicar GitHub Pages
 id: deployment
 uses: actions/deploy-pages@v4
-
-O GitHub documenta que um workflow personalizado pode configurar Pages, enviar o conteúdo com upload-pages-artifact e depois implantar esse artefato com deploy-pages. A documentação também exige pages: write e id-token: write para o deploy. Usando fluxos de trabalho personalizados com páginas de GitHub A documentação da própria ação deploy-pages confirma o padrão de um job de deploy dependente do job que criou o artefato. GitHub - actions/deploy-pages
-
-2. O que esse workflow fará
-
-A automação ficará:
-
-Plain Text
-Release dados-26-09
-↓
-nd-26-09.json
-bl-26-09.json
-↓
-GitHub Actions
-↓
-release-data/
-nd-26-09.json
-bl-26-09.json
-↓
-GitHub Pages
-↓
-index.html
-↓
-análises
