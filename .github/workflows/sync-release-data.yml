@@ -1,6 +1,6 @@
 name: Sync Release Data
 
- on:
+       on:
 ··push:
 ····branches: [main]
 ··release:
