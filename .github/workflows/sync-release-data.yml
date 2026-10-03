@@ -3,7 +3,7 @@ name: Sync Release Data
 on:
 ··push:
        ····branches: [main]
-  ··release:
+       ··release:
      ····types: [published, edited]
      ··workflow_dispatch: 
 permissions:
