@@ -25,7 +25,7 @@ concurrency:
 
 jobs:
   build:
-    name: Synchronize release files
+    name: Prepare dashboard and release data
     runs-on: ubuntu-latest
 
     steps:
@@ -35,7 +35,7 @@ jobs:
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
 
-      - name: Download ND and BL files
+      - name: Download ND and BL files from Releases
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -87,7 +87,7 @@ jobs:
 
           echo "Total JSON files: $json_count"
 
-      - name: Generate release index
+      - name: Generate release-data index
         run: |
           set -euo pipefail
 
@@ -99,9 +99,6 @@ jobs:
           folder = Path("release-data")
           files = sorted(folder.glob("*.json"))
 
-          lt = chr(60)
-          gt = chr(62)
-
           items = []
 
           for file in files:
@@ -110,58 +107,50 @@ jobs:
               file_url = quote(filename)
               size_mb = file.stat().st_size / (1024 * 1024)
 
-              link = (
-                  f'{lt}a href="./{file_url}" download{gt}'
-                  f'{safe_name}'
-                  f'{lt}/a{gt}'
+              items.append(
+                  f"""
+                  <li>
+                    ./{file_url}{safe_name}</a>
+                    <span class="meta">{size_mb:.2f} MB</span>
+                  </li>
+                  """
               )
 
-              item = (
-                  f'{lt}li{gt}'
-                  f'{link}'
-                  f'{lt}span class="meta"{gt}'
-                  f'{size_mb:.2f} MB'
-                  f'{lt}/span{gt}'
-                  f'{lt}/li{gt}'
-              )
-
-              items.append(item)
-
-          page_start = f"""<!doctype html>
-          {lt}html lang="pt-BR"{gt}
-          {lt}head{gt}
-            {lt}meta charset="utf-8"{gt}
-            {lt}meta
+          page = """<!doctype html>
+          <html lang="pt-BR">
+          <head>
+            <meta charset="utf-8">
+            <meta
               name="viewport"
               content="width=device-width, initial-scale=1"
-            {gt}
+            >
 
-            {lt}title{gt}Bases ND e BL{lt}/title{gt}
+            <title>Bases ND e BL</title>
 
-            {lt}style{gt}
-              body {{
+            <style>
+              body {
                 font-family: Arial, sans-serif;
                 max-width: 900px;
                 margin: 40px auto;
                 padding: 0 20px;
                 color: #24292f;
                 background: #ffffff;
-              }}
+              }
 
-              h1 {{
+              h1 {
                 margin-bottom: 8px;
-              }}
+              }
 
-              p {{
+              p {
                 color: #57606a;
-              }}
+              }
 
-              ul {{
+              ul {
                 list-style: none;
                 padding: 0;
-              }}
+              }
 
-              li {{
+              li {
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
@@ -170,79 +159,44 @@ jobs:
                 margin-bottom: 8px;
                 border: 1px solid #d0d7de;
                 border-radius: 6px;
-              }}
+              }
 
-              a {{
+              a {
                 color: #0969da;
                 text-decoration: none;
                 font-weight: 600;
                 overflow-wrap: anywhere;
-              }}
+              }
 
-              a:hover {{
+              a:hover {
                 text-decoration: underline;
-              }}
+              }
 
-              .meta {{
+              .meta {
                 color: #57606a;
                 font-size: 14px;
                 white-space: nowrap;
-              }}
-            {lt}/style{gt}
-          {lt}/head{gt}
+              }
+            </style>
+          </head>
 
-          {lt}body{gt}
-            {lt}h1{gt}Bases ND e BL{lt}/h1{gt}
+          <body>
+            <h1>Bases ND e BL</h1>
 
-            {lt}p{gt}
+            <p>
               Arquivos JSON sincronizados automaticamente das Releases.
-            {lt}/p{gt}
+            </p>
 
-            {lt}ul{gt}
+            <ul>
           """
 
-          page_end = f"""
-            {lt}/ul{gt}
-          {lt}/body{gt}
-          {lt}/html{gt}
-          """
+          page += "\n".join(items)
 
-          page = page_start + "\n".join(items) + page_end
+          page += """
+            </ul>
+          </body>
+          </html>
+          """
 
           output = folder / "index.html"
           output.write_text(page, encoding="utf-8")
-
-          print(f"Index generated with {len(files)} JSON file(s).")
-          print(f"Output: {output}")
-
-          for file in files:
-              print(f"Published: {file.name}")
-          PY
-
-      - name: Show generated files
-        run: |
-          echo "Files prepared for GitHub Pages:"
-
-          find release-data \
-            -maxdepth 1 \
-            -type f \
-            -printf "%f - %s bytes\n"
-
-      - name: Upload GitHub Pages artifact
-        uses: actions/upload-pages-artifact@v4
-        with:
-          path: release-data
-
-  deploy:
-    name: Deploy GitHub Pages
-    runs-on: ubuntu-latest
-    needs: build
-
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-
-    steps:
-      - name: Deploy GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
