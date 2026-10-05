@@ -44,26 +44,26 @@ jobs:
           rm -rf release-data
           mkdir -p release-data
 
-          gh release list \
-            --repo "${{ github.repository }}" \
-            --limit 100 \
-            --json tagName,isDraft,isPrerelease \
-            --jq '.[] | select(.isDraft == false and .isPrerelease == false) | .tagName' \
-          | while IFS= read -r tag; do
+          while IFS= read -r tag; do
+            if [ -z "$tag" ]; then
+              continue
+            fi
 
-              if [ -z "$tag" ]; then
-                continue
-              fi
+            echo "Processing release: $tag"
 
-              echo "Processing release: $tag"
-
-              gh release download "$tag" \
-                --repo "${{ github.repository }}" \
-                --pattern "nd-*.json" \
-                --pattern "bl-*.json" \
-                --dir release-data \
-                --clobber || true
-            done
+            gh release download "$tag" \
+              --repo "${{ github.repository }}" \
+              --pattern "nd-*.json" \
+              --pattern "bl-*.json" \
+              --dir release-data \
+              --clobber || true
+          done < <(
+            gh release list \
+              --repo "${{ github.repository }}" \
+              --limit 100 \
+              --json tagName,isDraft,isPrerelease \
+              --jq '.[] | select(.isDraft == false and .isPrerelease == false) | .tagName'
+          )
 
           echo "JSON files found:"
 
@@ -73,7 +73,32 @@ jobs:
             -name "*.json" \
             -print
 
-          json_count=$(
-            find release-data \
-              -maxdepth 1 \
-              
+          json_count=$(find release-data -maxdepth 1 -type f -name "*.json" | wc -l)
+
+          if [ "$json_count" -eq 0 ]; then
+            echo "ERROR: No JSON files were found in the Releases."
+            exit 1
+          fi
+
+          echo "Total JSON files: $json_count"
+
+      - name: Generate release-data index
+        run: |
+          set -euo pipefail
+
+          python3 <<'PY'
+          from pathlib import Path
+          from html import escape
+          from urllib.parse import quote
+
+          folder = Path("release-data")
+          files = sorted(folder.glob("*.json"))
+
+          lt = chr(60)
+          gt = chr(62)
+
+          items = []
+
+          for file in files:
+              filename = file.name
+          
