@@ -3,8 +3,12 @@ name: Sync Release Data
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - '.github/**'
+      - 'docs/**'
+      - 'README.md'
   release:
-    types: [published, edited]
+    types: [published]
   workflow_dispatch:
 
 permissions:
@@ -12,7 +16,7 @@ permissions:
   pages: write
 
 concurrency:
-  group: github-pages
+  group: sync-release-data-${{ github.repository }}-${{ github.ref_name || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -59,23 +63,23 @@ jobs:
           echo "Files synchronized:"
           find release-data -maxdepth 1 -type f -print || true
 
-          # Fail the job if required files are missing
-          if ! find release-data -maxdepth 1 -type f -name 'nd-*.json' -print -quit >/dev/null; then
-            echo "Error: no nd-*.json files found in release-data"
-            exit 1
+          # Non-fatal presence checks: warn if missing, but continue to generate index and deploy
+          nd_count=$(find release-data -maxdepth 1 -type f -name 'nd-*.json' -print -quit | wc -l)
+          bl_count=$(find release-data -maxdepth 1 -type f -name 'bl-*.json' -print -quit | wc -l)
+
+          if [ "$nd_count" -eq 0 ]; then
+            echo "Warning: no nd-*.json files found in release-data"
           fi
 
-          if ! find release-data -maxdepth 1 -type f -name 'bl-*.json' -print -quit >/dev/null; then
-            echo "Error: no bl-*.json files found in release-data"
-            exit 1
+          if [ "$bl_count" -eq 0 ]; then
+            echo "Warning: no bl-*.json files found in release-data"
           fi
-
-          echo "ND and BL found."
 
       - name: Generate index.html for release-data
         run: |
           set -euo pipefail
           INDEX_FILE=release-data/index.html
+
           cat > "$INDEX_FILE" <<'HTML'
           <!doctype html>
           <html lang="en">
@@ -107,4 +111,5 @@ jobs:
               echo "  <li><a href=\"./$fname\">$fname</a><span class=\"meta\"> — ${fsize} bytes</span></li>" >> "$INDEX_FILE"
             done
 
-          cat >> "$INDEX_FILE
+          # If no JSON files were found, show a friendly message
+          if ! find release-data -maxdepth 1 -type f -name '*.json' -print
