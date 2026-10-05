@@ -1,20 +1,36 @@
 name: Jekyll site CI
 
 on:
-push:
-    branches: [ "main" ]
-        pull_request:
-    branches: [ "main" ]
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
-    - name: Build the site in the jekyll/builder container
-      run: |
-        docker run \
-        -v ${{ github.workspace }}:/srv/jekyll -v ${{ github.workspace }}/_site:/srv/jekyll/_site \
-        jekyll/builder:latest /bin/bash -c "chmod -R 777 /srv/jekyll && jekyll build --future"
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Ensure _site directory exists
+        run: |
+          mkdir -p _site
+          chmod -R 0777 _site
+
+      - name: Build the site in the jekyll/builder container
+        run: |
+          set -euo pipefail
+
+          # Use the current runner UID/GID so generated files are owned by the runner
+          UID_GID="$(id -u):$(id -g)"
+
+          docker run --rm \
+            -u "$UID_GID" \
+            -v "${{ github.workspace }}:/srv/jekyll" \
+            -v "${{ github.workspace }}/_site:/srv/jekyll/_site" \
+            jekyll/builder:latest \
+            /bin/bash -lc "cd /srv/jekyll && jekyll build --future"
