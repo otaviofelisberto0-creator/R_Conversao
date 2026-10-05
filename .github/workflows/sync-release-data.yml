@@ -35,7 +35,7 @@ jobs:
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
 
-      - name: Download ND and BL files from Releases
+      - name: Download ND and BL files
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -67,59 +67,64 @@ jobs:
 
           done < release-tags.txt
 
-          echo "JSON files found:"
-
-          find release-data \
-            -maxdepth 1 \
-            -type f \
-            -name "*.json" \
-            -print
+          echo "Downloaded JSON files:"
+          find release-data -maxdepth 1 -type f -name "*.json" -print
 
           json_count=$(find release-data -maxdepth 1 -type f -name "*.json" | wc -l)
 
           if [ "$json_count" -eq 0 ]; then
-            echo "ERROR: No JSON files were found in the Releases."
+            echo "ERROR: No ND or BL JSON files found."
             exit 1
           fi
 
           echo "Total JSON files: $json_count"
 
-      - name: Generate release-data index
+      - name: Prepare dashboard site
         run: |
           set -euo pipefail
 
-          python3 <<'PY'
-          from pathlib import Path
-          from html import escape
-          from urllib.parse import quote
+          if [ ! -f "index.html" ]; then
+            echo "ERROR: Dashboard index.html was not found."
+            exit 1
+          fi
 
-          folder = Path("release-data")
-          files = sorted(folder.glob("*.json"))
+          rm -rf _site
+          mkdir -p _site
 
-          lt = chr(60)
-          gt = chr(62)
+          rsync -av \
+            --exclude=".git/" \
+            --exclude=".github/" \
+            --exclude="_site/" \
+            --exclude="release-data/" \
+            --exclude="release-tags.txt" \
+            ./ _site/
 
-          items = []
+          mkdir -p _site/release-data
+          cp release-data/*.json _site/release-data/
 
-          for file in files:
-              filename = file.name
-              safe_name = escape(filename)
-              file_url = quote(filename)
-              size_mb = file.stat().st_size / (1024 * 1024)
+          touch _site/.nojekyll
 
-              link = (
-                  f'{lt}a href="./{file_url}" download{gt}'
-                  f'{safe_name}'
-                  f'{lt}/a{gt}'
-              )
+          echo "Dashboard:"
+          ls -lh _site/index.html
 
-              item = (
-                  f'{lt}li{gt}'
-                  f'{link}'
-                  f'{lt}span class="meta"{gt}'
-                  f'{size_mb:.2f} MB'
-                  f'{lt}/span{gt}'
-                  f'{lt}/li{gt}'
-              )
+          echo "JSON files:"
+          ls -lh _site/release-data/
 
-          
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site
+
+  deploy:
+    name: Deploy GitHub Pages
+    runs-on: ubuntu-latest
+    needs: build
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
