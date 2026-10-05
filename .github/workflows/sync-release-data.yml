@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths-ignore:
-     - '.github/**'
+      - '.github/**'
       - 'docs/**'
       - 'README.md'
   release:
@@ -22,7 +22,6 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -136,7 +135,6 @@ jobs:
     needs: build
     environment:
       name: github-pages
-
     steps:
       - name: Deploy GitHub Pages
         id: deployment
