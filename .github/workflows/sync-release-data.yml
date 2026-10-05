@@ -44,6 +44,13 @@ jobs:
           rm -rf release-data
           mkdir -p release-data
 
+          gh release list \
+            --repo "${{ github.repository }}" \
+            --limit 100 \
+            --json tagName,isDraft,isPrerelease \
+            --jq '.[] | select(.isDraft == false and .isPrerelease == false) | .tagName' \
+            > release-tags.txt
+
           while IFS= read -r tag; do
             if [ -z "$tag" ]; then
               continue
@@ -57,13 +64,8 @@ jobs:
               --pattern "bl-*.json" \
               --dir release-data \
               --clobber || true
-          done < <(
-            gh release list \
-              --repo "${{ github.repository }}" \
-              --limit 100 \
-              --json tagName,isDraft,isPrerelease \
-              --jq '.[] | select(.isDraft == false and .isPrerelease == false) | .tagName'
-          )
+
+          done < release-tags.txt
 
           echo "JSON files found:"
 
@@ -101,4 +103,23 @@ jobs:
 
           for file in files:
               filename = file.name
+              safe_name = escape(filename)
+              file_url = quote(filename)
+              size_mb = file.stat().st_size / (1024 * 1024)
+
+              link = (
+                  f'{lt}a href="./{file_url}" download{gt}'
+                  f'{safe_name}'
+                  f'{lt}/a{gt}'
+              )
+
+              item = (
+                  f'{lt}li{gt}'
+                  f'{link}'
+                  f'{lt}span class="meta"{gt}'
+                  f'{size_mb:.2f} MB'
+                  f'{lt}/span{gt}'
+                  f'{lt}/li{gt}'
+              )
+
           
