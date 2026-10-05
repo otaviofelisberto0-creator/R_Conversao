@@ -1,15 +1,15 @@
 name: Sync Release Data
        
 on:
-     ··push:
-       ····branches: [main]
-        ··release:
-     ····types: [published, edited]
-     ··workflow_dispatch: 
+··push:
+····branches: [main]
+··release:
+····types: [published, edited]
+··workflow_dispatch: 
 permissions:
-    contents: read
-     pages: write
-      -token: write
+ contents: read
+ pages: write
+ -token: write
  
 concurrency:
     group: github-pages
