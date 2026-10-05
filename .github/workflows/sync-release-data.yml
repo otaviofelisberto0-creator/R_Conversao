@@ -37,6 +37,7 @@ jobs:
           rm -rf release-data
           mkdir -p release-data
 
+          # List releases and iterate over non-draft, non-prerelease tags
           gh release list \
             --limit 100 \
             --json tagName,isDraft,isPrerelease \
@@ -47,6 +48,7 @@ jobs:
             fi
             echo "Processing release: $tag"
 
+            # Download matching files into release-data; ignore errors if none found
             gh release download "$tag" \
               --pattern 'nd-*.json' \
               --pattern 'bl-*.json' \
@@ -57,6 +59,7 @@ jobs:
           echo "Files synchronized:"
           find release-data -maxdepth 1 -type f -print || true
 
+          # Fail the job if required files are missing
           if ! find release-data -maxdepth 1 -type f -name 'nd-*.json' -print -quit >/dev/null; then
             echo "Error: no nd-*.json files found in release-data"
             exit 1
