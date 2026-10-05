@@ -65,6 +65,7 @@ jobs:
             done
 
           echo "JSON files found:"
+
           find release-data \
             -maxdepth 1 \
             -type f \
@@ -98,6 +99,9 @@ jobs:
           folder = Path("release-data")
           files = sorted(folder.glob("*.json"))
 
+          lt = chr(60)
+          gt = chr(62)
+
           items = []
 
           for file in files:
@@ -106,50 +110,58 @@ jobs:
               file_url = quote(filename)
               size_mb = file.stat().st_size / (1024 * 1024)
 
-              items.append(
-                  f"""
-                  <li>
-                    ./{file_url}{safe_name}</a>
-                    <span class="meta">{size_mb:.2f} MB</span>
-                  </li>
-                  """
+              link = (
+                  f'{lt}a href="./{file_url}" download{gt}'
+                  f'{safe_name}'
+                  f'{lt}/a{gt}'
               )
 
-          page = """<!doctype html>
-          <html lang="pt-BR">
-          <head>
-            <meta charset="utf-8">
-            <meta
+              item = (
+                  f'{lt}li{gt}'
+                  f'{link}'
+                  f'{lt}span class="meta"{gt}'
+                  f'{size_mb:.2f} MB'
+                  f'{lt}/span{gt}'
+                  f'{lt}/li{gt}'
+              )
+
+              items.append(item)
+
+          page_start = f"""<!doctype html>
+          {lt}html lang="pt-BR"{gt}
+          {lt}head{gt}
+            {lt}meta charset="utf-8"{gt}
+            {lt}meta
               name="viewport"
               content="width=device-width, initial-scale=1"
-            >
+            {gt}
 
-            <title>Bases ND e BL</title>
+            {lt}title{gt}Bases ND e BL{lt}/title{gt}
 
-            <style>
-              body {
+            {lt}style{gt}
+              body {{
                 font-family: Arial, sans-serif;
                 max-width: 900px;
                 margin: 40px auto;
                 padding: 0 20px;
                 color: #24292f;
                 background: #ffffff;
-              }
+              }}
 
-              h1 {
+              h1 {{
                 margin-bottom: 8px;
-              }
+              }}
 
-              p {
+              p {{
                 color: #57606a;
-              }
+              }}
 
-              ul {
+              ul {{
                 list-style: none;
                 padding: 0;
-              }
+              }}
 
-              li {
+              li {{
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
@@ -158,50 +170,53 @@ jobs:
                 margin-bottom: 8px;
                 border: 1px solid #d0d7de;
                 border-radius: 6px;
-              }
+              }}
 
-              a {
+              a {{
                 color: #0969da;
                 text-decoration: none;
                 font-weight: 600;
                 overflow-wrap: anywhere;
-              }
+              }}
 
-              a:hover {
+              a:hover {{
                 text-decoration: underline;
-              }
+              }}
 
-              .meta {
+              .meta {{
                 color: #57606a;
                 font-size: 14px;
                 white-space: nowrap;
-              }
-            </style>
-          </head>
+              }}
+            {lt}/style{gt}
+          {lt}/head{gt}
 
-          <body>
-            <h1>Bases ND e BL</h1>
+          {lt}body{gt}
+            {lt}h1{gt}Bases ND e BL{lt}/h1{gt}
 
-            <p>
+            {lt}p{gt}
               Arquivos JSON sincronizados automaticamente das Releases.
-            </p>
+            {lt}/p{gt}
 
-            <ul>
+            {lt}ul{gt}
           """
 
-          page += "\n".join(items)
-
-          page += """
-            </ul>
-          </body>
-          </html>
+          page_end = f"""
+            {lt}/ul{gt}
+          {lt}/body{gt}
+          {lt}/html{gt}
           """
+
+          page = page_start + "\n".join(items) + page_end
 
           output = folder / "index.html"
           output.write_text(page, encoding="utf-8")
 
           print(f"Index generated with {len(files)} JSON file(s).")
           print(f"Output: {output}")
+
+          for file in files:
+              print(f"Published: {file.name}")
           PY
 
       - name: Show generated files
