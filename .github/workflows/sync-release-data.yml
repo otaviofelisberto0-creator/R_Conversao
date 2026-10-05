@@ -93,5 +93,3 @@ jobs:
               ul { list-style: none; padding-left: 0; }
               li { margin: 0.4rem 0; }
               a { color: #0366d6; text-decoration: none; }
-              a:hover { text-decoration: underline; }
-              .meta { color: #6a737d; font-size
