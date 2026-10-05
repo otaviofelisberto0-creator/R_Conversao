@@ -20,7 +20,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: sync-release-data-${{ github.repository }}-${{ github.ref_name || github.ref }}
+  group: pages-${{ github.repository }}
   cancel-in-progress: true
 
 jobs:
@@ -50,6 +50,7 @@ jobs:
             --json tagName,isDraft,isPrerelease \
             --jq '.[] | select(.isDraft == false and .isPrerelease == false) | .tagName' \
           | while IFS= read -r tag; do
+
               if [ -z "$tag" ]; then
                 continue
               fi
@@ -75,128 +76,4 @@ jobs:
           json_count=$(
             find release-data \
               -maxdepth 1 \
-              -type f \
-              -name "*.json" |
-            wc -l
-          )
-
-          if [ "$json_count" -eq 0 ]; then
-            echo "ERROR: No JSON files were found in the Releases."
-            exit 1
-          fi
-
-          echo "Total JSON files: $json_count"
-
-      - name: Generate release-data index
-        run: |
-          set -euo pipefail
-
-          python3 <<'PY'
-          from pathlib import Path
-          from html import escape
-          from urllib.parse import quote
-
-          folder = Path("release-data")
-          files = sorted(folder.glob("*.json"))
-
-          items = []
-
-          for file in files:
-              filename = file.name
-              safe_name = escape(filename)
-              file_url = quote(filename)
-              size_mb = file.stat().st_size / (1024 * 1024)
-
-              items.append(
-                  f"""
-                  <li>
-                    ./{file_url}{safe_name}</a>
-                    <span class="meta">{size_mb:.2f} MB</span>
-                  </li>
-                  """
-              )
-
-          page = """<!doctype html>
-          <html lang="pt-BR">
-          <head>
-            <meta charset="utf-8">
-            <meta
-              name="viewport"
-              content="width=device-width, initial-scale=1"
-            >
-
-            <title>Bases ND e BL</title>
-
-            <style>
-              body {
-                font-family: Arial, sans-serif;
-                max-width: 900px;
-                margin: 40px auto;
-                padding: 0 20px;
-                color: #24292f;
-                background: #ffffff;
-              }
-
-              h1 {
-                margin-bottom: 8px;
-              }
-
-              p {
-                color: #57606a;
-              }
-
-              ul {
-                list-style: none;
-                padding: 0;
-              }
-
-              li {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                gap: 20px;
-                padding: 14px;
-                margin-bottom: 8px;
-                border: 1px solid #d0d7de;
-                border-radius: 6px;
-              }
-
-              a {
-                color: #0969da;
-                text-decoration: none;
-                font-weight: 600;
-                overflow-wrap: anywhere;
-              }
-
-              a:hover {
-                text-decoration: underline;
-              }
-
-              .meta {
-                color: #57606a;
-                font-size: 14px;
-                white-space: nowrap;
-              }
-            </style>
-          </head>
-
-          <body>
-            <h1>Bases ND e BL</h1>
-
-            <p>
-              Arquivos JSON sincronizados automaticamente das Releases.
-            </p>
-
-            <ul>
-          """
-
-          page += "\n".join(items)
-
-          page += """
-            </ul>
-          </body>
-          </html>
-          """
-
-          output = folder / "index.html"
-          output.write_text(page, encoding="utf-8")
+              
