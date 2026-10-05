@@ -65,9 +65,19 @@ jobs:
             done
 
           echo "JSON files found:"
-          find release-data -maxdepth 1 -type f -name "*.json" -print
+          find release-data \
+            -maxdepth 1 \
+            -type f \
+            -name "*.json" \
+            -print
 
-          json_count=$(find release-data -maxdepth 1 -type f -name "*.json" | wc -l)
+          json_count=$(
+            find release-data \
+              -maxdepth 1 \
+              -type f \
+              -name "*.json" |
+            wc -l
+          )
 
           if [ "$json_count" -eq 0 ]; then
             echo "ERROR: No JSON files were found in the Releases."
@@ -83,6 +93,7 @@ jobs:
           python3 <<'PY'
           from pathlib import Path
           from html import escape
+          from urllib.parse import quote
 
           folder = Path("release-data")
           files = sorted(folder.glob("*.json"))
@@ -90,23 +101,29 @@ jobs:
           items = []
 
           for file in files:
-              name = escape(file.name)
+              filename = file.name
+              safe_name = escape(filename)
+              file_url = quote(filename)
               size_mb = file.stat().st_size / (1024 * 1024)
 
               items.append(
-                  f'''
+                  f"""
                   <li>
-                    ./{name}{name}</a>
+                    ./{file_url}{safe_name}</a>
                     <span class="meta">{size_mb:.2f} MB</span>
                   </li>
-                  '''
+                  """
               )
 
           page = """<!doctype html>
           <html lang="pt-BR">
           <head>
             <meta charset="utf-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <meta
+              name="viewport"
+              content="width=device-width, initial-scale=1"
+            >
+
             <title>Bases ND e BL</title>
 
             <style>
@@ -164,7 +181,10 @@ jobs:
 
           <body>
             <h1>Bases ND e BL</h1>
-            <p>Arquivos JSON sincronizados automaticamente das Releases.</p>
+
+            <p>
+              Arquivos JSON sincronizados automaticamente das Releases.
+            </p>
 
             <ul>
           """
@@ -187,7 +207,11 @@ jobs:
       - name: Show generated files
         run: |
           echo "Files prepared for GitHub Pages:"
-          find release-data -maxdepth 1 -type f -printf "%f - %s bytes\n"
+
+          find release-data \
+            -maxdepth 1 \
+            -type f \
+            -printf "%f - %s bytes\n"
 
       - name: Upload GitHub Pages artifact
         uses: actions/upload-pages-artifact@v4
