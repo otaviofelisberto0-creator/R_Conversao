@@ -3,7 +3,7 @@ name: Sync Release Data
 on:
   push:
     branches: [main]
-    paths-ignore:
+paths-ignore:
      - '.github/**'
       - 'docs/**'
       - 'README.md'
