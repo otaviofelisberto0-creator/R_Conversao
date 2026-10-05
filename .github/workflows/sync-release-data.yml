@@ -79,6 +79,163 @@ jobs:
 
           echo "Total JSON files: $json_count"
 
+      - name: Generate release manifest
+        run: |
+          set -euo pipefail
+
+          python3 <<'PY'
+          import json
+          import re
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          folder = Path("release-data")
+
+          pattern = re.compile(
+              r"^(nd|bl)-(\d{2})-(\d{2})\.json$",
+              re.IGNORECASE
+          )
+
+          competences = {}
+
+          for file in sorted(folder.glob("*.json")):
+              match = pattern.match(file.name)
+
+              if not match:
+                  continue
+
+              file_type = match.group(1).lower()
+              year = match.group(2)
+              month = match.group(3)
+              competence = f"{year}-{month}"
+
+              if competence not in competences:
+                  competences[competence] = {}
+
+              competences[competence][file_type] = file.name
+
+          if not competences:
+              raise SystemExit(
+                  "ERROR: No valid ND/BL files found for manifest."
+              )
+
+          complete = {
+              competence: files
+              for competence, files in competences.items()
+              if "nd" in files and "bl" in files
+          }
+
+          if not complete:
+              raise SystemExit(
+                  "ERROR: No competence contains both ND and BL."
+              )
+
+          def competence_key(value):
+              year, month = value.split("-")
+              return int(year), int(month)
+
+          latest = max(
+              complete.keys(),
+              key=competence_key
+          )
+
+          manifest = {
+              "version": 1,
+              "updated_at": datetime.now(
+                  timezone.utc
+              ).isoformat(),
+              "latest": latest,
+              "competences": complete
+          }
+
+          output = folder / "manifest.json"
+
+          output.write_text(
+              json.dumps(
+                  manifest,
+                  ensure_ascii=False,
+                  indent=2
+              ),
+              encoding="utf-8"
+          )
+
+          print("Manifest generated successfully.")
+          print(
+              json.dumps(
+                  manifest,
+                  ensure_ascii=False,
+                  indent=2
+              )
+          )
+          PY
+
+      - name: Validate release manifest
+        run: |
+          set -euo pipefail
+
+          if [ ! -f "release-data/manifest.json" ]; then
+            echo "ERROR: manifest.json was not generated."
+            exit 1
+          fi
+
+          python3 <<'PY'
+          import json
+          from pathlib import Path
+
+          manifest_file = Path(
+              "release-data/manifest.json"
+          )
+
+          manifest = json.loads(
+              manifest_file.read_text(
+                  encoding="utf-8"
+              )
+          )
+
+          latest = manifest.get("latest")
+          competences = manifest.get(
+              "competences",
+              {}
+          )
+
+          if not latest:
+              raise SystemExit(
+                  "ERROR: latest is missing."
+              )
+
+          if latest not in competences:
+              raise SystemExit(
+                  "ERROR: latest competence is missing."
+              )
+
+          latest_files = competences[latest]
+
+          if "nd" not in latest_files:
+              raise SystemExit(
+                  "ERROR: latest ND file is missing."
+              )
+
+          if "bl" not in latest_files:
+              raise SystemExit(
+                  "ERROR: latest BL file is missing."
+              )
+
+          print(
+              "Latest competence:",
+              latest
+          )
+
+          print(
+              "ND:",
+              latest_files["nd"]
+          )
+
+          print(
+              "BL:",
+              latest_files["bl"]
+          )
+          PY
+
       - name: Prepare dashboard site
         run: |
           set -euo pipefail
@@ -100,15 +257,26 @@ jobs:
             ./ _site/
 
           mkdir -p _site/release-data
-          cp release-data/*.json _site/release-data/
+
+          cp -R release-data/. _site/release-data/
 
           touch _site/.nojekyll
 
           echo "Dashboard:"
           ls -lh _site/index.html
 
-          echo "JSON files:"
+          echo "Release data:"
           ls -lh _site/release-data/
+
+          if [ ! -f "_site/release-data/manifest.json" ]; then
+            echo "ERROR: manifest.json was not copied."
+            exit 1
+          fi
+
+          if [ ! -f "_site/index.html" ]; then
+            echo "ERROR: dashboard index.html is missing."
+            exit 1
+          fi
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v4
