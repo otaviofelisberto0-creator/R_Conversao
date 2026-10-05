@@ -36,3 +36,20 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          set -euo pipefail
+
+          rm -rf release-data
+          mkdir -p release-data
+
+          # List releases and iterate over non-draft, non-prerelease tags
+          gh release list \
+            --limit 100 \
+            --json tagName,isDraft,isPrerelease \
+            --jq '.[] | select(.isDraft == false and .isPrerelease == false) | .tagName' \
+          | while IFS= read -r tag; do
+            if [ -z "$tag" ]; then
+              continue
+            fi
+            echo "Processing release: $tag"
+
+            # Download matching files into release-data; ignore errors if none found
