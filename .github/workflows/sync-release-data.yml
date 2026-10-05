@@ -2,18 +2,23 @@ name: Sync Release Data
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
     paths-ignore:
-      - '.github/**'
-      - 'docs/**'
-      - 'README.md'
+      - ".github/**"
+      - "docs/**"
+      - "README.md"
+
   release:
-    types: [published]
+    types:
+      - published
+
   workflow_dispatch:
 
 permissions:
   contents: read
   pages: write
+  id-token: write
 
 concurrency:
   group: sync-release-data-${{ github.repository }}-${{ github.ref_name || github.ref }}
@@ -22,6 +27,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -40,31 +46,29 @@ jobs:
           rm -rf release-data
           mkdir -p release-data
 
-          # List releases and iterate over non-draft, non-prerelease tags
           gh release list \
             --limit 100 \
             --json tagName,isDraft,isPrerelease \
             --jq '.[] | select(.isDraft == false and .isPrerelease == false) | .tagName' \
           | while IFS= read -r tag; do
-            if [ -z "$tag" ]; then
-              continue
-            fi
-            echo "Processing release: $tag"
+              if [ -z "$tag" ]; then
+                continue
+              fi
 
-            # Download matching files into release-data; ignore errors if none found
-            gh release download "$tag" \
-              --pattern 'nd-*.json' \
-              --pattern 'bl-*.json' \
-              --dir release-data \
-              --clobber || true
-          done
+              echo "Processing release: $tag"
+
+              gh release download "$tag" \
+                --pattern "nd-*.json" \
+                --pattern "bl-*.json" \
+                --dir release-data \
+                --clobber || true
+            done
 
           echo "Files synchronized:"
           find release-data -maxdepth 1 -type f -print || true
 
-          # Non-fatal presence checks: warn if missing, but continue to generate index and deploy
-          nd_count=$(find release-data -maxdepth 1 -type f -name 'nd-*.json' -print -quit | wc -l)
-          bl_count=$(find release-data -maxdepth 1 -type f -name 'bl-*.json' -print -quit | wc -l)
+          nd_count=$(find release-data -maxdepth 1 -type f -name "nd-*.json" -print -quit | wc -l)
+          bl_count=$(find release-data -maxdepth 1 -type f -name "bl-*.json" -print -quit | wc -l)
 
           if [ "$nd_count" -eq 0 ]; then
             echo "Warning: no nd-*.json files found in release-data"
@@ -77,50 +81,78 @@ jobs:
       - name: Generate index.html for release-data
         run: |
           set -euo pipefail
-          INDEX_FILE=release-data/index.html
+
+          INDEX_FILE="release-data/index.html"
 
           cat > "$INDEX_FILE" <<'HTML'
           <!doctype html>
-          <html lang="en">
+          <html lang="pt-BR">
           <head>
             <meta charset="utf-8">
-            <meta name="viewport" content="width=device-width,initial-scale=1">
+            <meta name="viewport" content="width=device-width, initial-scale=1">
             <title>Release Data</title>
             <style>
-              body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; padding: 2rem; }
-              h1 { margin-bottom: 0.5rem; }
-              ul { list-style: none; padding-left: 0; }
-              li { margin: 0.4rem 0; }
-              a { color: #0366d6; text-decoration: none; }
-              a:hover { text-decoration: underline; }
-              .meta { color: #6a737d; font-size: 0.9rem; margin-left: 0.5rem; }
+              body {
+                font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial;
+                padding: 2rem;
+              }
+
+              h1 {
+                margin-bottom: 0.5rem;
+              }
+
+              ul {
+                list-style: none;
+                padding-left: 0;
+              }
+
+              li {
+                margin: 0.4rem 0;
+              }
+
+              a {
+                color: #0366d6;
+                text-decoration: none;
+              }
+
+              a:hover {
+                text-decoration: underline;
+              }
+
+              .meta {
+                color: #6a737d;
+                font-size: 0.9rem;
+                margin-left: 0.5rem;
+              }
             </style>
           </head>
           <body>
             <h1>Release Data</h1>
-            <p>JSON files synchronized from releases.</p>
+            <p>Arquivos JSON sincronizados das Releases.</p>
             <ul>
           HTML
 
-          # Add each JSON file as a list item with filename and size
-          find release-data -maxdepth 1 -type f -name '*.json' -print0 \
+          find release-data -maxdepth 1 -type f -name "*.json" -print0 \
+            | sort -z \
             | while IFS= read -r -d '' file; do
-              fname=$(basename "$file")
-              fsize=$(stat -c%s "$file" 2>/dev/null || stat -f%z "$file" 2>/dev/null || echo "0")
-              echo "  <li><a href=\"./$fname\">$fname</a><span class=\"meta\"> — ${fsize} bytes</span></li>" >> "$INDEX_FILE"
-            done
+                fname=$(basename "$file")
+                fsize=$(stat -c%s "$file")
 
-          # If no JSON files were found, show a friendly message
-          if ! find release-data -maxdepth 1 -type f -name '*.json' -print -quit >/dev/null; then
+                printf '    <li>./%s%s</a><span class="meta"> - %s bytes</span></li>\n' \
+                  "$fname" "$fname" "$fsize" >> "$INDEX_FILE"
+              done
+
+          if ! find release-data -maxdepth 1 -type f -name "*.json" -print -quit |
+            grep -q .; then
             cat >> "$INDEX_FILE" <<'HTML'
-              <li>No JSON files found.</li>
-            HTML
+              <li>Nenhum arquivo JSON encontrado.</li>
+          HTML
           fi
 
           cat >> "$INDEX_FILE" <<'HTML'
             </ul>
             <hr>
-            <p>Generated by GitHub Actions.</p>
+            <p>Gerado automaticamente pelo GitHub Actions.</p>
           </body>
           </html>
           HTML
@@ -133,8 +165,11 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     needs: build
+
     environment:
       name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
     steps:
       - name: Deploy GitHub Pages
         id: deployment
