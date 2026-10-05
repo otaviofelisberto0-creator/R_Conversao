@@ -37,4 +37,3 @@ jobs:
           echo "Workflow funcionando corretamente"
           echo "Repositorio: ${{ github.repository }}"
           echo "Branch: ${{ github.ref_name }}"
-`
