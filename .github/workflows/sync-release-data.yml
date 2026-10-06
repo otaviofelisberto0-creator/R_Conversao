@@ -11,6 +11,10 @@ on:
   release:
     types:
       - published
+      - edited
+
+  schedule:
+    - cron: "*/10 * * * *"
 
   workflow_dispatch:
 
@@ -47,8 +51,8 @@ jobs:
           gh release list \
             --repo "${{ github.repository }}" \
             --limit 100 \
-            --json tagName,isDraft,isPrerelease \
-            --jq '.[] | select(.isDraft == false and .isPrerelease == false) | .tagName' \
+            --json tagName,isDraft,isPrerelease,publishedAt \
+            --jq '[.[] | select(.isDraft == false and .isPrerelease == false)] | sort_by(.publishedAt) | .[].tagName' \
             > release-tags.txt
 
           while IFS= read -r tag; do
@@ -64,13 +68,18 @@ jobs:
               --pattern "bl-*.json" \
               --dir release-data \
               --clobber || true
-
           done < release-tags.txt
 
           echo "Downloaded JSON files:"
           find release-data -maxdepth 1 -type f -name "*.json" -print
 
-          json_count=$(find release-data -maxdepth 1 -type f -name "*.json" | wc -l)
+          json_count=$(
+            find release-data \
+              -maxdepth 1 \
+              -type f \
+              -name "*.json" |
+            wc -l
+          )
 
           if [ "$json_count" -eq 0 ]; then
             echo "ERROR: No ND or BL JSON files found."
@@ -160,6 +169,7 @@ jobs:
           )
 
           print("Manifest generated successfully.")
+
           print(
               json.dumps(
                   manifest,
@@ -193,6 +203,7 @@ jobs:
           )
 
           latest = manifest.get("latest")
+
           competences = manifest.get(
               "competences",
               {}
