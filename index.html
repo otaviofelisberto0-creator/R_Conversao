@@ -792,10 +792,40 @@ async function parseGitHubReleaseSourcesQuiet(type,assets){
   let validation=validateBaseRows(type,rows);if(!validation.valid)throw new Error(`${type}: ${validation.message}`);
   return {type,rows,sourceRows,removed,months,files,sourceLabel:'GitHub Releases publicados'};
 }
+function validateDashboardReleaseData(ndResult,blResult){
+  const failures=[];
+  if(!ndResult?.rows?.length)failures.push('ND sem registros elegíveis');
+  if(!blResult?.rows?.length)failures.push('BL sem registros elegíveis');
+  if(!(ndResult?.rows||[]).some(r=>isoDay(r.DT)))failures.push('ND sem DT válida');
+  if(!(blResult?.rows||[]).some(r=>isoDay(r.DT)))failures.push('BL sem DT válida');
+  const all=[...(ndResult?.rows||[]),...(blResult?.rows||[])];
+  if(!all.some(r=>String(r.COD_MUNICIPIO||'').trim()))failures.push('COD_MUNICIPIO não encontrado');
+  if(failures.length)throw new Error(failures.join('; '));
+}
+function validateRpsAfterCross(){
+  const sc=J.filter(r=>norm(r.CRITERIO_UF)==='SC');
+  const pr=J.filter(r=>norm(r.CRITERIO_UF)==='PR');
+  if(!sc.length||!pr.length){
+    const missing=[!sc.length&&'GRUPO SC',!pr.length&&'GRUPO PR'].filter(Boolean).join(' e ');
+    throw new Error('Cruzamento concluído, mas '+missing+' não foi identificado pela UF. GRUPO RPS = GRUPO SC + GRUPO PR.');
+  }
+}
+function showAutomaticLoadError(message){
+  const text='Falha na carga automática pelo GitHub Releases: '+message;
+  const dateBox=$('#dailyDates'),ndMsg=$('#ndEvolutionMessage'),blMsg=$('#blEvolutionMessage'),d2=$('#d2Date');
+  if(dateBox)dateBox.textContent=text;
+  if(d2){d2.innerHTML='<option value="">Carga automática indisponível</option>';d2.disabled=true;}
+  if(ndMsg){ndMsg.className='ndEvolutionMessage negative';ndMsg.textContent=text;}
+  if(blMsg){blMsg.className='blEvolutionMessage negative';blMsg.textContent=text;}
+}
 function commitDashboardReleaseData(ndResult,blResult){
-  // P e PB continuam sendo as fontes das analises, mas nenhum controle da Base Analitica e alterado.
-  P=ndResult.rows;PB=blResult.rows;okND=true;okBL=true;dashboardReleaseReady=true;
-  cross();updateHeadMeta([...P,...PB]);
+  // Fonte oficial do dashboard publicado: arquivos ND e BL dos GitHub Releases.
+  validateDashboardReleaseData(ndResult,blResult);
+  P=ndResult.rows;PB=blResult.rows;okND=true;okBL=true;dashboardReleaseReady=false;
+  cross();
+  validateRpsAfterCross();
+  dashboardReleaseReady=true;
+  updateHeadMeta([...P,...PB]);
   ['#tConv','#tAna','#tDia','#tMes'].forEach(id=>$(id).disabled=false);
   try{fillDailyFilters()}catch(err){console.error(err)}
   try{fillMonthFilters()}catch(err){console.error(err)}
@@ -823,9 +853,12 @@ async function loadGitHubReleaseAssets(){
     setGitHubReleaseStatus(`Carga automática concluída: ${releases.length} Releases em ${releases.pagesRead||1} página(s), ${ndResult.files.length} JSON(s) ND + ${blResult.files.length} JSON(s) BL (${files} arquivos; ${rows.toLocaleString("pt-BR")} linhas). Competências AA-MM: ${formatCompetences(allMonths)}.`,"success");
   }catch(err){
     console.error("Carga automática do dashboard:",err);
-    setInitialLoad(1,"Não foi possível concluir a carga automática. Verifique o status da fonte em Base Analítica.");
+    dashboardReleaseReady=false;
+    const reason=err.message||"erro inesperado";
+    setInitialLoad(1,"Não foi possível concluir a carga automática dos arquivos publicados no GitHub Releases.");
     setTimeout(finishInitialLoad,1200);
-    setGitHubReleaseStatus("Falha na carga automática dos JSONs mensais pelo GitHub Releases: "+(err.message||"erro inesperado"),"error");
+    setGitHubReleaseStatus("Falha na carga automática dos arquivos ND/BL pelo GitHub Releases: "+reason,"error");
+    showAutomaticLoadError(reason);
   }finally{githubReleaseLoadRunning=false;if(button)button.disabled=false}
 }
 $("#loadGitHubRelease").onclick=()=>loadGitHubReleaseAssets();
