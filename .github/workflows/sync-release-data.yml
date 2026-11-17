@@ -1,4 +1,4 @@
-name: Publicar Dashboard Oficial e Sincronizar Releases
+name: Sincronizar Dados e Publicar Dashboard Oficial
 
 on:
   push:
@@ -7,10 +7,10 @@ on:
       - index.html
       - .github/workflows/sync-release-data.yml
   release:
-    types: [published, edited]
+    types: [published, edited, released]
   workflow_dispatch:
   schedule:
-    - cron: '17 * * * *'
+    - cron: '*/15 * * * *'
 
 permissions:
   contents: read
@@ -19,9 +19,11 @@ permissions:
 
 env:
   OFFICIAL_BUILD: V65-SUBCLUSTER-OFICIAL
+  # Este deve ser o unico workflow ativo que usa actions/deploy-pages.
+  # Workflows antigos devem ser excluidos ou movidos para fora de .github/workflows.
 
 concurrency:
-  group: r-conversao-pages-oficial
+  group: dashboard-oficial-pages
   cancel-in-progress: true
 
 jobs:
@@ -37,31 +39,6 @@ jobs:
           ref: main
           fetch-depth: 1
           persist-credentials: false
-
-      - name: Garantir um unico workflow publicador
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          mapfile -t publishers < <(
-            grep -RIl --include='*.yml' --include='*.yaml' \
-              'actions/deploy-pages@' .github/workflows || true
-          )
-
-          if [ "${#publishers[@]}" -ne 1 ]; then
-            echo 'ERRO: deve existir exatamente um workflow com actions/deploy-pages.'
-            printf 'Publicadores encontrados: %s\n' "${publishers[@]:-nenhum}"
-            exit 1
-          fi
-
-          expected='.github/workflows/sync-release-data.yml'
-          if [ "${publishers[0]}" != "$expected" ]; then
-            echo "ERRO: o unico publicador deve ser $expected"
-            echo "Encontrado: ${publishers[0]}"
-            exit 1
-          fi
-
-          echo "OK: publicador unico confirmado em $expected"
 
       - name: Validar index oficial, metas, Subcluster e Andira
         shell: bash
