@@ -298,8 +298,12 @@ jobs:
               Path('release-data/manifest.json').read_text(encoding='utf-8')
           )
 
-          if manifest.get('officialBuild') != 'V65-SUBCLUSTER-OFICIAL':
-              raise SystemExit('ERRO: build oficial divergente no manifesto.')
+          expected_build = 'V71-SEGMENTO-MUNICIPIO-DIARIA'
+          actual_build = manifest.get('officialBuild')
+          if actual_build != expected_build:
+              raise SystemExit(
+                  f'ERRO: build oficial divergente no manifesto. Esperado={expected_build} | Encontrado={actual_build}'
+              )
 
           latest = manifest.get('latest')
           competences = manifest.get('competences')
