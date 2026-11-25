@@ -18,7 +18,7 @@ permissions:
   id-token: write
 
 env:
-  OFFICIAL_BUILD: V65-SUBCLUSTER-OFICIAL
+  OFFICIAL_BUILD: V71-SEGMENTO-MUNICIPIO-DIARIA
   # Este deve ser o unico workflow ativo que usa actions/deploy-pages.
   # Workflows antigos devem ser excluidos ou movidos para fora de .github/workflows.
 
@@ -48,6 +48,11 @@ jobs:
           test -s index.html
           grep -qi '<html' index.html
           grep -qi '</html>' index.html
+          grep -q 'content="V71-SEGMENTO-MUNICIPIO-DIARIA"' index.html
+          grep -q "const OFFICIAL_BUILD='V71-SEGMENTO-MUNICIPIO-DIARIA'" index.html
+          grep -q 'id="dailySegmentoMunicipio"' index.html
+          grep -q 'NM_SEGMENTO_MUNICIPIO' index.html
+          grep -q '4101101' index.html
 
           # As verificacoes funcionais abaixo geram avisos, mas nao impedem
           # a sincronizacao diaria. O index publicado continua sendo sempre
@@ -62,14 +67,16 @@ jobs:
             fi
           }
 
-          check_marker 'OFFICIAL BUILD: V65-SUBCLUSTER-OFICIAL' 'Identificacao da versao oficial'
-          check_marker "const OFFICIAL_BUILD='V65-SUBCLUSTER-OFICIAL'" 'Constante da versao oficial'
+          check_marker 'OFFICIAL BUILD: V71-SEGMENTO-MUNICIPIO-DIARIA' 'Identificacao da versao oficial'
+          check_marker "const OFFICIAL_BUILD='V71-SEGMENTO-MUNICIPIO-DIARIA'" 'Constante da versao oficial'
           check_marker 'CONVERSAO[[:space:]]*:[[:space:]]*80' 'Meta de Conversao 80%'
           check_marker 'INSTALACAO_48H[[:space:]]*:[[:space:]]*65' 'Meta de Instalacao 48h 65%'
           check_marker 'INSTALACAO_3_DIAS[[:space:]]*:[[:space:]]*78' 'Meta de Instalacao 3 dias 78%'
           check_marker '4101101' 'Cidade Andira codigo 4101101'
           check_marker 'id="asub"' 'Filtro Subcluster da Conversao'
           check_marker 'id="dailySubcluster"' 'Filtro Subcluster da Analise Diaria'
+          check_marker 'id="dailySegmentoMunicipio"' 'Filtro Segmento Municipio da Analise Diaria'
+          check_marker 'NM_SEGMENTO_MUNICIPIO' 'Campo Segmento Municipio preservado no conversor JSON'
           check_marker 'id="treeSubcluster"' 'Filtro Subcluster do Mes x Mes'
 
           echo 'OK: estrutura HTML valida. A atualizacao automatica pode continuar.'
@@ -295,7 +302,7 @@ jobs:
               Path('release-data/manifest.json').read_text(encoding='utf-8')
           )
 
-          if manifest.get('officialBuild') != 'V65-SUBCLUSTER-OFICIAL':
+          if manifest.get('officialBuild') != 'V71-SEGMENTO-MUNICIPIO-DIARIA':
               raise SystemExit('ERRO: build oficial divergente no manifesto.')
 
           latest = manifest.get('latest')
